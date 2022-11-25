@@ -26,79 +26,97 @@ RegisterNumber:  212220220052
 
 import numpy as np
 import matplotlib.pyplot as plt
-import pandas as pd
+from scipy import optimize
 
-datasets = pd.read_csv("/content/Social_Network_Ads (1).csv")
-X = datasets.iloc[:,[2,3]].values
-Y = datasets.iloc[:,[4]].values
+data=np.loadtxt("ex2data1.txt",delimiter=',')
+X=data[:,[0,1]]
+y=data[:,2]
 
-from sklearn.model_selection import train_test_split
-X_Train, X_Test, Y_Train, Y_Test = train_test_split(X, Y, test_size = 0.25, random_state = 0)
+X[:5]
 
-from sklearn.preprocessing import StandardScaler
-sc_X = StandardScaler()
-sc_X
+y[:5]
 
-X_Train = sc_X.fit_transform(X_Train)
-X_Test = sc_X.fit_transform(X_Test)
-
-from sklearn.linear_model import LogisticRegression
-classifier = LogisticRegression(random_state = 0)
-classifier.fit(X_Train, Y_Train)
-
-Y_Pred = classifier.predict(X_Test)
-Y_Pred
-
-from sklearn.metrics import confusion_matrix
-cm = confusion_matrix(Y_Test, Y_Pred)
-cm
-
-from sklearn import metrics
-accuracy = metrics.accuracy_score(Y_Test, Y_Pred)
-accuracy
-
-recall_sensitivity = metrics.recall_score(Y_Test, Y_Pred, pos_label = 1)
-recall_specificity = metrics.recall_score(Y_Test, Y_Pred, pos_label = 0)
-recall_sensitivity, recall_specificity
-
-from matplotlib.colors import ListedColormap
-X_Set, Y_Set = X_Train, Y_Train
-X1,X2 = np.meshgrid(np.arange(start = X_Set[:,0].min()-1, stop = X_Set[:,0].max()+1, step = 0.01), 
-                    np.arange(start = X_Set[:,1].min()-1, stop = X_Set[:,1].max()+1, step = 0.01))
-
-plt.contourf(X1,X2,classifier.predict(np.array([X1.ravel(),
-X2.ravel()]).T).reshape(X1.shape),
-             alpha = 0.75, cmap = ListedColormap(('red','green')))
-
-plt.xlim(X1.min(), X2.max())
-plt.ylim(X1.min(), X2.max())
-for i,j in enumerate(np.unique(Y_Set)):
-    plt.scatter(X_Set[Y_Set == j,0],X_Set[Y_Set==j,1],
-                c=ListedColormap(('red','green'))(i),label=j)
-plt.title('Logistic Regression (Training set)')
-plt.xlabel('Age')
-plt.label('Estimated Salary')
+plt.figure()
+plt.scatter(X[y==1][:,0],X[y==1][:,1],label="Admitted")
+plt.scatter(X[y==0][:,0],X[y==0][:,1],label="Not Admitted")
+plt.xlabel("Exam 1 score")
+plt.ylabel("Exam 2 score")
 plt.legend()
 plt.show()
 
+def sigmoid(z):
+    return 1/(1+np.exp(-z))
+
+plt.plot()
+X_plot=np.linspace(-10,10,100)
+plt.plot(X_plot,sigmoid(X_plot))
+plt.show()
+
+def costFunction (theta,X,y):
+    h=sigmoid(np.dot(X,theta))
+    J=-(np.dot(y,np.log(h))+np.dot(1-y,np.log(1-h)))/X.shape[0]
+    grad=np.dot(X.T,h-y)/X.shape[0]
+    return J,grad
+
+X_train=np.hstack((np.ones((X.shape[0],1)),X))
+theta=np.array([0,0,0])
+J,grad=costFunction(theta,X_train,y)
+print(J)
+print(grad)
+
+def cost (theta,X,y):
+    h=sigmoid(np.dot(X,theta))
+    J=-(np.dot(y,np.log(h))+np.dot(1-y,np.log(1-h)))/X.shape[0]
+    return J
+
+def gradient (theta,X,y):
+    h=sigmoid(np.dot(X,theta))
+    grad=np.dot(X.T,h-y)/X.shape[0]
+    return grad
+
+X_train=np.hstack((np.ones((X.shape[0],1)),X))
+theta=np.array([0,0,0])
+res=optimize.minimize(fun=cost,x0=theta,args=(X_train,y),method='Newton-CG',jac=gradient)
+print(res.fun)
+print(res.x)
+
+def plotDecisionBoundary(theta,X,y):
+    x_min,x_max=X[:,0].min()-1,X[:,0].max()+1
+    y_min,y_max=X[:,1].min()-1,X[:,1].max()+1
+    xx,yy=np.meshgrid(np.arange(x_min,x_max,0.1),np.arange(y_min,y_max,0.1))
+    X_plot=np.c_[xx.ravel(),yy.ravel()]
+    X_plot=np.hstack((np.ones((X_plot.shape[0],1)),X_plot))
+    y_plot=np.dot(X_plot,theta).reshape(xx.shape)
+    
+    plt.figure()
+    plt.scatter(X[y==1][:,0],X[y==1][:,1],label="Admitted")
+    plt.scatter(X[y==0][:,0],X[y==0][:,1],label="Not Admitted")
+    plt.contour(xx,yy,y_plot,levels=[0])
+    plt.xlabel("Exam 1 score")
+    plt.ylabel("Exam 2 score")
+    plt.legend()
+    plt.show()
+
+plotDecisionBoundary(res.x,X,y)
+
+prob=sigmoid(np.dot(np.array([1,45,85]),res.x))
+print(prob)
+
+def predict(theta,X):
+    X_train =np.hstack((np.ones((X.shape[0],1)),X))
+    prob=sigmoid(np.dot(X_train,theta))
+    return (prob>=0.5).astype(int)
+np.mean(predict(res.x,X)==y)
 ```
 
 ## Output:
+![ss1](https://user-images.githubusercontent.com/115924983/203998582-4f59eb79-5e08-4165-ac7e-c49e8fbf0209.png)
+![ss2](https://user-images.githubusercontent.com/115924983/203998601-2d025e36-d569-4280-be7f-2401b566adc9.png)
+![ss3](https://user-images.githubusercontent.com/115924983/203998620-fad67dac-3e6f-4ae0-ac22-b4bec937a0dd.png)
+![ss4](https://user-images.githubusercontent.com/115924983/203998633-8a5469f0-8a5c-4f6a-a253-4edf351b2c2c.png)
+![ss5](https://user-images.githubusercontent.com/115924983/203998651-b947114b-890f-4096-b295-310af216ed8a.png)
+![ss6](https://user-images.githubusercontent.com/115924983/203998669-9ae4c223-f29e-420f-823f-4751edbe6e2b.png)
 
-## prediction of test result:
-![ss1](https://user-images.githubusercontent.com/115924983/196043905-486ae8b3-8331-497f-b56c-31c043d5534a.jpg)
-
-## Confusion Matrix:
-![ss2](https://user-images.githubusercontent.com/115924983/196043950-f2820ad1-5587-4f10-906a-37fbbc534063.jpg)
-
-## Accuracy:
-![ss3](https://user-images.githubusercontent.com/115924983/196043995-f2e01dc1-9b4a-4531-91d4-78297fce9805.jpg)
-
-## Recalling Sensitivity and Specificity:
-![ss4](https://user-images.githubusercontent.com/115924983/196044010-c9d30091-f1ae-48d7-b6eb-ac7eda2d96ac.jpg)
-
-## Visulaizing Training set Result:
-![ss5](https://user-images.githubusercontent.com/115924983/196044026-87238184-3303-445b-8f37-ba7698eae18e.png)
 
 ## Result:
 Thus the program to implement the the Logistic Regression Using Gradient Descent is written and verified using python programming.
